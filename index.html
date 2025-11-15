@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Irrigation Review App</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/TileLayer",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, TileLayer, FeatureLayer, Editor) {
+
+      // --- 1. Layers -------------------------------------------------------
+
+      const binaryLayer = new TileLayer({
+        portalItem: {
+          id: "YOUR_US_BINARY_ITEM_ID_HERE"   // <-- replace
+        }
+      });
+
+      const reviewLayer = new FeatureLayer({
+        portalItem: {
+          id: "YOUR_AREAREVIEW_TAGS_ITEM_ID_HERE"  // <-- replace
+        },
+        outFields: ["*"]  // we need all fields for the form
+      });
+
+      // --- 2. Map & View ---------------------------------------------------
+
+      const map = new Map({
+        basemap: "topographic",
+        layers: [binaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-98, 39],  // continental US-ish
+        zoom: 4
+      });
+
+      // --- 3. Editor widget with custom form -------------------------------
+
+      view.when().then(() => {
+
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false,
+            // This controls the form users see when adding/editing
+            formTemplate: {
+              title: "Review irrigation classification",
+              description: "Click on the map to add a review point.",
+              elements: [
+                {
+                  type: "field",
+                  fieldName: "tag_code",   // adjust to your real field name
+                  label: "Tag",
+                  // If your field already has a coded domain in AGOL,
+                  // you can omit 'domain' and it will use that.
+                  // If not, you can define it here:
+                  domain: {
+                    type: "codedValue",
+                    codedValues: [
+                      { name: "False Positive", code: 1 },
+                      { name: "False Negative", code: 2 },
+                      { name: "Uncertain",      code: 3 }
+                    ]
+                  }
+                },
+                {
+                  type: "field",
+                  fieldName: "comment",   // adjust to your comment field name
+                  label: "Comment",
+                  hint: "Optional: explain why you chose this tag."
+                }
+                // Do NOT add creator / creationDate here – editor tracking fills them.
+              ]
+            }
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+</body>
+</html>
