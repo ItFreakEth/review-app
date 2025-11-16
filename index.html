@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Irrigation Review App</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/ImageryTileLayer",   // 👈 changed
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, ImageryTileLayer, FeatureLayer, Editor) {
+
+      // --- 1. Layers -------------------------------------------------------
+
+     // US_binary: Tiled imagery layer (hosted)
+    const binaryLayer = new ImageryTileLayer({
+    portalItem: {
+        id: "3ffec6629a8945d99fd46af2ce58e5b5"
+    },
+    // Try to color 0 and 1 differently
+    renderer: {
+        type: "rasterColormap",
+        colormap: [
+        // [value,   R,   G,   B,   A]
+        [0,      255, 165,   0, 255],   // 0 = orange (non-irrigated)
+        [1,        0,   0, 255, 255]    // 1 = blue (irrigated)
+        ]
+    },
+    opacity: 0.85
+    });
+  
+
+
+      // AreaReview_Tags: feature layer for reviewers' points
+      const reviewLayer = new FeatureLayer({
+        portalItem: {
+          id: "eedc0b4ec7364260a474f653127dc08f"
+        },
+        outFields: ["*"]
+      });
+
+      // --- 2. Map & View ---------------------------------------------------
+
+      const map = new Map({
+        basemap: "topographic",
+        layers: [binaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map
+        // no fixed center/zoom – we'll zoom to the imagery extent
+      });
+
+      // --- 3. Editor widget -----------------------------------------------
+
+      view.when().then(function () {
+
+        // Zoom to the full extent of the binary imagery once it’s loaded
+        binaryLayer.when(function () {
+          if (binaryLayer.fullExtent) {
+            view.goTo(binaryLayer.fullExtent.expand(1.1));
+          }
+        });
+
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false
+            // no custom formTemplate – using layer's own settings
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+</body>
+</html>
