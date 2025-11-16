@@ -22,66 +22,69 @@
   <div id="viewDiv"></div>
 
   <script>
+    // 🔁 Fill these in:
+    const WEBMAP_ID = "YOUR_WEBMAP_ID_HERE"; // <-- web map where US_binary is styled blue/yellow
+    const BINARY_LAYER_ITEM_ID = "3ffec6629a8945d99fd46af2ce58e5b5"; // US_binary imagery
+    const REVIEW_LAYER_ITEM_ID = "eedc0b4ec7364260a474f653127dc08f"; // AreaReview_Tags
+
     require([
-      "esri/Map",
+      "esri/WebMap",
       "esri/views/MapView",
-      "esri/layers/ImageryTileLayer",   // 👈 changed
       "esri/layers/FeatureLayer",
       "esri/widgets/Editor"
-    ], function (Map, MapView, ImageryTileLayer, FeatureLayer, Editor) {
+    ], function (WebMap, MapView, FeatureLayer, Editor) {
 
-      // --- 1. Layers -------------------------------------------------------
+      // --- 1. Load the web map with the correct symbology ------------------
 
-     // US_binary: Tiled imagery layer (hosted)
-    const binaryLayer = new ImageryTileLayer({
-    portalItem: {
-        id: "3ffec6629a8945d99fd46af2ce58e5b5"
-    },
-    // Try to color 0 and 1 differently
-    renderer: {
-        type: "rasterColormap",
-        colormap: [
-        // [value,   R,   G,   B,   A]
-        [0,      255, 165,   0, 255],   // 0 = orange (non-irrigated)
-        [1,        0,   0, 255, 255]    // 1 = blue (irrigated)
-        ]
-    },
-    opacity: 0.85
-    });
-  
-
-
-      // AreaReview_Tags: feature layer for reviewers' points
-      const reviewLayer = new FeatureLayer({
+      const webmap = new WebMap({
         portalItem: {
-          id: "eedc0b4ec7364260a474f653127dc08f"
-        },
-        outFields: ["*"]
-      });
-
-      // --- 2. Map & View ---------------------------------------------------
-
-      const map = new Map({
-        basemap: "topographic",
-        layers: [binaryLayer, reviewLayer]
+          id: WEBMAP_ID
+        }
       });
 
       const view = new MapView({
         container: "viewDiv",
-        map: map
-        // no fixed center/zoom – we'll zoom to the imagery extent
+        map: webmap
       });
 
-      // --- 3. Editor widget -----------------------------------------------
+      // --- 2. After the map loads, wire up layers + editor -----------------
 
       view.when().then(function () {
 
-        // Zoom to the full extent of the binary imagery once it’s loaded
-        binaryLayer.when(function () {
-          if (binaryLayer.fullExtent) {
-            view.goTo(binaryLayer.fullExtent.expand(1.1));
-          }
+        // Try to find the binary layer in the webmap (by portal item id)
+        const binaryLayer = webmap.layers.find(function (layer) {
+          return layer.portalItem &&
+                 layer.portalItem.id === BINARY_LAYER_ITEM_ID;
         });
+
+        // Try to find the review layer in the webmap first
+        let reviewLayer = webmap.layers.find(function (layer) {
+          return layer.portalItem &&
+                 layer.portalItem.id === REVIEW_LAYER_ITEM_ID;
+        });
+
+        // If review layer is not already in the webmap, add it from portal
+        if (!reviewLayer) {
+          reviewLayer = new FeatureLayer({
+            portalItem: { id: REVIEW_LAYER_ITEM_ID },
+            outFields: ["*"]
+          });
+          webmap.add(reviewLayer);
+        } else {
+          // make sure we can write to all fields
+          reviewLayer.outFields = ["*"];
+        }
+
+        // Zoom to the binary raster extent if available
+        if (binaryLayer) {
+          binaryLayer.when(function () {
+            if (binaryLayer.fullExtent) {
+              view.goTo(binaryLayer.fullExtent.expand(1.1));
+            }
+          });
+        }
+
+        // --- 3. Editor widget for AreaReview_Tags -------------------------
 
         const editor = new Editor({
           view: view,
@@ -89,8 +92,7 @@
             layer: reviewLayer,
             addEnabled: true,
             updateEnabled: true,
-            deleteEnabled: false
-            // no custom formTemplate – using layer's own settings
+            deleteEnabled: false   // reviewers can’t delete other tags
           }]
         });
 
