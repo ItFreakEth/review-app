@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Irrigation Review App</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/ImageryLayer",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, ImageryLayer, FeatureLayer, Editor) {
+
+      // --- 1. Binary imagery layer: only value 1, in blue ------------------
+
+      const binaryLayer = new ImageryLayer({
+        portalItem: {
+          // 🔁 REPLACE with your new Hosted Imagery Layer ID
+          id: "NEW_IMAGERY_LAYER_ID"
+        },
+        renderer: {
+          type: "raster-colormap",
+          colormap: [
+            // [value, R,   G,   B,   A]
+            [0,      0,   0,   0,   0],     // 0 = fully transparent (dropped)
+            [1,      0,   0, 255, 255]      // 1 = blue (irrigated)
+          ]
+        },
+        opacity: 1   // keep 1, transparency is handled by colormap
+      });
+
+      // --- 2. Review points layer (AreaReview_Tags) ------------------------
+
+      const reviewLayer = new FeatureLayer({
+        portalItem: {
+          id: "eedc0b4ec7364260a474f653127dc08f"  // your review feature layer
+        },
+        outFields: ["*"]
+      });
+
+      // --- 3. Map & View ---------------------------------------------------
+
+      const map = new Map({
+        basemap: "topographic",
+        layers: [binaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map,
+        center: [-98, 39],  // fallback center (US-ish)
+        zoom: 4
+      });
+
+      // --- 4. Zoom to imagery extent & add Editor --------------------------
+
+      view.when().then(function () {
+
+        // If the imagery has an extent, zoom to it
+        binaryLayer.when(function () {
+          if (binaryLayer.fullExtent) {
+            view.goTo(binaryLayer.fullExtent.expand(1.1));
+          }
+        });
+
+        // Simple Editor – uses layer’s own form/fields
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+</body>
+</html>
