@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Irrigation Review App</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/ImageryLayer",
+      "esri/layers/support/RasterFunction",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, ImageryLayer, RasterFunction, FeatureLayer, Editor) {
+
+      // --- 1. Raster Function to remove zeros -----------------------
+      // Reclassify: 0 → NoData, 1 → 1
+      const remapRF = new RasterFunction({
+        functionName: "Remap",
+        functionArguments: {
+          inputRanges: [0, 0, 1, 1],   // 0→0, 1→1
+          outputValues: [0, 1],        // 0 stays 0, 1 stays 1
+          allowUnmatched: false
+        }
+      });
+
+      // --- 2. Colorizer -----------------------
+      // Pixel 1 = Blue, Pixel 0 = Transparent
+      const colorRF = new RasterFunction({
+        functionName: "Colormap",
+        functionArguments: {
+          colormap: [
+            [0, 0, 0, 0],       // 0 → transparent
+            [1, 0, 112, 255]    // 1 → blue (RGB)
+          ],
+          raster: remapRF
+        }
+      });
+
+      // --- 3. Imagery Layer --------------------
+      const binaryLayer = new ImageryLayer({
+        portalItem: {
+          id: "5bc8047f8f384007bc59b8d2443d5a3f"   // YOUR NEW DYNAMIC LAYER
+        },
+        renderingRule: colorRF,
+        opacity: 0.85
+      });
+
+      // --- 4. Review points layer --------------
+      const reviewLayer = new FeatureLayer({
+        portalItem: { id: "YOUR_TAGS_LAYER_ID_HERE" },
+        outFields: ["*"]
+      });
+
+      // --- 5. Map ------------------------------
+      const map = new Map({
+        basemap: "topographic",
+        layers: [binaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-98, 38],
+        zoom: 4
+      });
+
+      // --- 6. Editor ----------------------------
+      view.when().then(() => {
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false,
+            formTemplate: {
+              title: "Review irrigation classification",
+              description: "Click a location to add a review.",
+              elements: [
+                {
+                  type: "field",
+                  fieldName: "tag_code",
+                  label: "Tag",
+                  domain: {
+                    type: "codedValue",
+                    codedValues: [
+                      { name: "False Positive", code: 1 },
+                      { name: "False Negative", code: 2 },
+                      { name: "Uncertain",      code: 3 }
+                    ]
+                  }
+                },
+                {
+                  type: "field",
+                  fieldName: "comment",
+                  label: "Comment"
+                }
+              ]
+            }
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+
+</body>
+</html>
