@@ -25,15 +25,15 @@
     require([
       "esri/Map",
       "esri/views/MapView",
-      "esri/layers/TileLayer",
+      "esri/layers/ImageryTileLayer",
       "esri/layers/FeatureLayer",
       "esri/widgets/Editor"
-    ], function (Map, MapView, TileLayer, FeatureLayer, Editor) {
+    ], function (Map, MapView, ImageryTileLayer, FeatureLayer, Editor) {
 
       // --------------------------------------------------------------------
       // 1. South America binary layer (tiled imagery)
       // --------------------------------------------------------------------
-      const saBinaryLayer = new TileLayer({
+      const saBinaryLayer = new ImageryTileLayer({
         portalItem: {
           id: "364ae8e6439c41f986f13c59fdd90629"  // South America binary tiles
         }
@@ -82,7 +82,7 @@
               elements: [
                 {
                   type: "field",
-                  fieldName: "tag_code",   // String field
+                  fieldName: "tag_code",   // String field in your feature layer
                   label: "Tag",
                   domain: {
                     type: "codedValue",
@@ -95,7 +95,7 @@
                 },
                 {
                   type: "field",
-                  fieldName: "Reviewer_Comments",  // comments field
+                  fieldName: "Reviewer_Comments",
                   label: "Comments",
                   hint: "Optional: explain why you chose FP / FN / U."
                 },
