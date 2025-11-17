@@ -31,31 +31,20 @@
     ], function (Map, MapView, TileLayer, FeatureLayer, Editor) {
 
       // --------------------------------------------------------------------
-      // 1. South America binary raster (0/1)
+      // 1. South America binary layer (tiled imagery)
       // --------------------------------------------------------------------
       const saBinaryLayer = new TileLayer({
         portalItem: {
-          // South America tiled imagery layer
-          id: "364ae8e6439c41f986f13c59fdd90629"
-        },
-        renderer: {
-          type: "rasterColormap",
-          colormap: [
-            // [value, R,   G,   B,   A]
-            [1,      0,   0, 255, 255]   // irrigated (1) = blue
-            // 0, NaN and other values are not listed => transparent
-          ]
-        },
-        opacity: 0.9
+          id: "364ae8e6439c41f986f13c59fdd90629"  // South America binary tiles
+        }
       });
 
       // --------------------------------------------------------------------
-      // 2. Review points layer (same schema as before)
+      // 2. Review points layer (shared review layer)
       // --------------------------------------------------------------------
       const reviewLayer = new FeatureLayer({
         portalItem: {
-          // AreaReview_Tags (shared review layer)
-          id: "eedc0b4ec7364260a474f653127dc08f"
+          id: "eedc0b4ec7364260a474f653127dc08f"   // AreaReview_Tags
         },
         outFields: ["*"]
       });
@@ -71,24 +60,14 @@
       const view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [-60, -15],   // rough center of South America
-        zoom: 3.5
+        center: [-60, -15],  // rough center of South America
+        zoom: 3
       });
 
       // --------------------------------------------------------------------
-      // 4. Editor widget with FP / FN tagging form
+      // 4. Editor widget – FP/FN/U + comments
       // --------------------------------------------------------------------
       view.when().then(function () {
-
-        // Zoom to South America raster extent if available
-        saBinaryLayer.when(function () {
-          if (saBinaryLayer.fullExtent) {
-            view.goTo(saBinaryLayer.fullExtent.expand(1.1))
-              .catch(function (err) {
-                console.warn("goTo fullExtent failed:", err);
-              });
-          }
-        });
 
         const editor = new Editor({
           view: view,
@@ -99,7 +78,7 @@
             deleteEnabled: false,
             formTemplate: {
               title: "South America irrigation review",
-              description: "Click on the map to add a review point and label it as FP or FN.",
+              description: "Click on the map to add a review point and tag it.",
               elements: [
                 {
                   type: "field",
