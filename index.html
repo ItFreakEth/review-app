@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>South America Irrigation Review</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/TileLayer",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, TileLayer, FeatureLayer, Editor) {
+
+      // --------------------------------------------------------------------
+      // 1. South America binary raster (0/1)
+      // --------------------------------------------------------------------
+      const saBinaryLayer = new TileLayer({
+        portalItem: {
+          // South America tiled imagery layer
+          id: "364ae8e6439c41f986f13c59fdd90629"
+        },
+        renderer: {
+          type: "rasterColormap",
+          colormap: [
+            // [value, R,   G,   B,   A]
+            [1,      0,   0, 255, 255]   // irrigated (1) = blue
+            // 0, NaN and other values are not listed => transparent
+          ]
+        },
+        opacity: 0.9
+      });
+
+      // --------------------------------------------------------------------
+      // 2. Review points layer (same schema as before)
+      // --------------------------------------------------------------------
+      const reviewLayer = new FeatureLayer({
+        portalItem: {
+          // AreaReview_Tags (shared review layer)
+          id: "eedc0b4ec7364260a474f653127dc08f"
+        },
+        outFields: ["*"]
+      });
+
+      // --------------------------------------------------------------------
+      // 3. Map & view
+      // --------------------------------------------------------------------
+      const map = new Map({
+        basemap: "topographic",
+        layers: [saBinaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-60, -15],   // rough center of South America
+        zoom: 3.5
+      });
+
+      // --------------------------------------------------------------------
+      // 4. Editor widget with FP / FN tagging form
+      // --------------------------------------------------------------------
+      view.when().then(function () {
+
+        // Zoom to South America raster extent if available
+        saBinaryLayer.when(function () {
+          if (saBinaryLayer.fullExtent) {
+            view.goTo(saBinaryLayer.fullExtent.expand(1.1))
+              .catch(function (err) {
+                console.warn("goTo fullExtent failed:", err);
+              });
+          }
+        });
+
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false,
+            formTemplate: {
+              title: "South America irrigation review",
+              description: "Click on the map to add a review point and label it as FP or FN.",
+              elements: [
+                {
+                  type: "field",
+                  fieldName: "tag_code",   // String field
+                  label: "Tag",
+                  domain: {
+                    type: "codedValue",
+                    codedValues: [
+                      { name: "False Positive (FP)", code: "FP" },
+                      { name: "False Negative (FN)", code: "FN" },
+                      { name: "Uncertain (U)",       code: "U" }
+                    ]
+                  }
+                },
+                {
+                  type: "field",
+                  fieldName: "Reviewer_Comments",  // comments field
+                  label: "Comments",
+                  hint: "Optional: explain why you chose FP / FN / U."
+                },
+                {
+                  type: "field",
+                  fieldName: "reviewer",
+                  label: "Reviewer",
+                  hint: "Your name or initials."
+                },
+                {
+                  type: "field",
+                  fieldName: "review_date",
+                  label: "Review date"
+                }
+              ]
+            }
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+</body>
+</html>
