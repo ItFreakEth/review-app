@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Irrigation Review App</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/ImageryLayer",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Editor"
+    ], function (Map, MapView, ImageryLayer, FeatureLayer, Editor) {
+
+      // --- 1. Binary imagery layer ---------------------------------------
+      // Hosted imagery item: 3b48960d8332439d82debf060b5bceb6
+      const binaryLayer = new ImageryLayer({
+        portalItem: {
+          id: "3b48960d8332439d82debf060b5bceb6"
+        },
+        renderer: {
+          type: "raster-colormap",
+          colormap: [
+            // [value,   R,   G,   B,   A]
+            [0,      0,   0,   0,   0],   // 0 = fully transparent (drop zeros / NaNs)
+            [1,      0,   0, 255, 255],   // 1 = irrigated (blue)
+            [2,    230, 120,  20, 255]    // 2 = non-irrigated (orange)
+          ]
+        },
+        opacity: 0.85
+      });
+
+      // --- 2. Review points layer ----------------------------------------
+      const reviewLayer = new FeatureLayer({
+        portalItem: {
+          id: "eedc0b4ec7364260a474f653127dc08f"   // AreaReview_Tags
+        },
+        outFields: ["*"]
+      });
+
+      // --- 3. Map & view --------------------------------------------------
+      const map = new Map({
+        basemap: "topographic",
+        layers: [binaryLayer, reviewLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        // temporary fallback; we'll immediately override with the raster extent
+        center: [0, 0],
+        zoom: 2
+      });
+
+      // --- 4. Editor widget & zoom to data -------------------------------
+      view.when().then(function () {
+
+        // Zoom to full extent of the imagery layer once it’s loaded
+        binaryLayer.when(function () {
+          if (binaryLayer.fullExtent) {
+            view.goTo(binaryLayer.fullExtent.expand(1.1));
+          }
+        });
+
+        const editor = new Editor({
+          view: view,
+          layerInfos: [{
+            layer: reviewLayer,
+            addEnabled: true,
+            updateEnabled: true,
+            deleteEnabled: false
+          }]
+        });
+
+        view.ui.add(editor, "top-right");
+      });
+
+    });
+  </script>
+</body>
+</html>
