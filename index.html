@@ -27,8 +27,18 @@
       "esri/views/MapView",
       "esri/layers/ImageryTileLayer",
       "esri/layers/FeatureLayer",
-      "esri/widgets/Editor"
-    ], function (Map, MapView, ImageryTileLayer, FeatureLayer, Editor) {
+      "esri/widgets/Editor",
+      "esri/widgets/BasemapGallery",
+      "esri/widgets/Expand"
+    ], function (
+      Map,
+      MapView,
+      ImageryTileLayer,
+      FeatureLayer,
+      Editor,
+      BasemapGallery,
+      Expand
+    ) {
 
       // --------------------------------------------------------------------
       // 1. South America binary layer (tiled imagery)
@@ -36,7 +46,8 @@
       const saBinaryLayer = new ImageryTileLayer({
         portalItem: {
           id: "364ae8e6439c41f986f13c59fdd90629"  // South America binary tiles
-        }
+        },
+        opacity: 0.7   // so you can see the basemap underneath a bit
       });
 
       // --------------------------------------------------------------------
@@ -50,10 +61,10 @@
       });
 
       // --------------------------------------------------------------------
-      // 3. Map & view
+      // 3. Map & view (with basemap)
       // --------------------------------------------------------------------
       const map = new Map({
-        basemap: "topographic",
+        basemap: "satellite",         // <-- change this to any Esri basemap id
         layers: [saBinaryLayer, reviewLayer]
       });
 
@@ -82,7 +93,7 @@
               elements: [
                 {
                   type: "field",
-                  fieldName: "tag_code",   // String field in your feature layer
+                  fieldName: "tag_code",
                   label: "Tag",
                   domain: {
                     type: "codedValue",
@@ -115,7 +126,21 @@
           }]
         });
 
+        // ------------------------------------------------------------------
+        // 5. Basemap gallery (so users can change basemap)
+        // ------------------------------------------------------------------
+        const basemapGallery = new BasemapGallery({
+          view: view
+        });
+
+        const bgExpand = new Expand({
+          view: view,
+          content: basemapGallery,
+          expanded: false
+        });
+
         view.ui.add(editor, "top-right");
+        view.ui.add(bgExpand, "top-left");
       });
 
     });
