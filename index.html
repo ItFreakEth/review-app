@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Global Irrigation Review – All Continents</title>
+  <title>Global Irrigation Review – Regional Tiles</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
   <!-- ArcGIS JS API -->
@@ -31,8 +31,7 @@
       "esri/widgets/Editor",
       "esri/widgets/BasemapGallery",
       "esri/widgets/Expand",
-      "esri/widgets/LayerList",
-      "esri/layers/support/RasterFunction"
+      "esri/widgets/LayerList"
     ], function (
       Map,
       MapView,
@@ -41,61 +40,81 @@
       Editor,
       BasemapGallery,
       Expand,
-      LayerList,
-      RasterFunction
+      LayerList
     ) {
 
       // ----------------------------------------------------------
-      // Build a colormap where:
-      //   0   -> fully transparent
-      //   1–255 -> dark blue
+      // ASIA REGIONS (dark-blue tiles)
       // ----------------------------------------------------------
-      const colormap = [];
-      for (let v = 0; v < 256; v++) {
-        if (v === 0) {
-          // background
-          colormap.push([0, 0, 0, 0, 0]);      // [value, R, G, B, A]
-        } else {
-          // irrigated / positive values
-          colormap.push([v, 8, 81, 156, 255]); // dark blue
-        }
-      }
+      const westAsiaLayer = new ImageryTileLayer({
+        portalItem: { id: "397fd12bc410448aa046e09a972b8654" }, // West Asia
+        opacity: 0.8,
+        title: "West Asia"
+      });
 
-      const blueRenderingRule = new RasterFunction({
-        functionName: "Colormap",
-        functionArguments: {
-          Raster: "$$",
-          Colormap: colormap
-        }
+      const eastAsiaLayer = new ImageryTileLayer({
+        portalItem: { id: "a8204e2c77b64ff6ad0286fe84024c72" }, // East Asia
+        opacity: 0.8,
+        title: "East Asia"
+      });
+
+      const centralAsiaLayer = new ImageryTileLayer({
+        portalItem: { id: "8a82c7d3e0434e03a796c4311b4fb141" }, // Central Asia
+        opacity: 0.8,
+        title: "Central Asia"
       });
 
       // ----------------------------------------------------------
-      // Imagery layers per continent
-      //  - Africa, Asia, North America -> forced dark blue
-      //  - Others keep built-in styling
+      // NORTH AMERICA REGIONS (dark-blue tiles)
       // ----------------------------------------------------------
-      const africaLayer = new ImageryTileLayer({
-        portalItem: { id: "d66a2816a3614ec38c91ba15384202c8" },
+      const usLayer = new ImageryTileLayer({
+        portalItem: { id: "a8204e2c77b64ff6ad0286fe84024c72" }, // US (id as provided)
         opacity: 0.8,
-        renderingRule: blueRenderingRule,
-        title: "Africa"
+        title: "US"
       });
 
-      const asiaLayer = new ImageryTileLayer({
-        portalItem: { id: "6e4f5c7c85064ec2b41d9166790adf9b" },
+      const canadaLayer = new ImageryTileLayer({
+        portalItem: { id: "c2859579b7c44272817e0f380890ebf6" }, // Canada
         opacity: 0.8,
-        renderingRule: blueRenderingRule,
-        title: "Asia"
+        title: "Canada"
       });
 
-      const northAmericaLayer = new ImageryTileLayer({
-        portalItem: { id: "a510d600fe5540459649dd00811cb64d" },
+      const otherNaLayer = new ImageryTileLayer({
+        portalItem: { id: "9acf1e20d8dd4eb4842d789ebe07611e" }, // Other North America
         opacity: 0.8,
-        renderingRule: blueRenderingRule,
-        title: "North America"
+        title: "Other North America"
       });
 
-      // These already have the dark-blue look you like
+      // ----------------------------------------------------------
+      // AFRICA REGIONS (dark-blue tiles)
+      // ----------------------------------------------------------
+      const southAfricaLayer = new ImageryTileLayer({
+        portalItem: { id: "5fd8fd9a268c4ddca0690acfe0d1436b" }, // South Africa region
+        opacity: 0.8,
+        title: "South Africa region"
+      });
+
+      const eastNorthAfricaLayer = new ImageryTileLayer({
+        portalItem: { id: "964c6af61d74476aa9627bce98e4b5d3" }, // East & North Africa
+        opacity: 0.8,
+        title: "East & North Africa"
+      });
+
+      const westAfrica1Layer = new ImageryTileLayer({
+        portalItem: { id: "d1cd2f99860246fa8fc2ef10134bad74" }, // West Africa 1
+        opacity: 0.8,
+        title: "West Africa 1"
+      });
+
+      const westAfrica2Layer = new ImageryTileLayer({
+        portalItem: { id: "deaf56848b274fd096da3691b0641481" }, // West Africa 2
+        opacity: 0.8,
+        title: "West Africa 2"
+      });
+
+      // ----------------------------------------------------------
+      // OTHER CONTINENTS (already good dark-blue symbology)
+      // ----------------------------------------------------------
       const southAmericaLayer = new ImageryTileLayer({
         portalItem: { id: "364ae8e6439c41f986f13c59fdd90629" },
         opacity: 0.8,
@@ -129,12 +148,28 @@
       const map = new Map({
         basemap: "satellite",
         layers: [
-          africaLayer,
-          asiaLayer,
-          northAmericaLayer,
+          // Africa regions
+          southAfricaLayer,
+          eastNorthAfricaLayer,
+          westAfrica1Layer,
+          westAfrica2Layer,
+
+          // Asia regions
+          westAsiaLayer,
+          eastAsiaLayer,
+          centralAsiaLayer,
+
+          // North America regions
+          usLayer,
+          canadaLayer,
+          otherNaLayer,
+
+          // Other continents
           southAmericaLayer,
           europeLayer,
           oceaniaLayer,
+
+          // Review points
           reviewLayer
         ]
       });
@@ -142,12 +177,13 @@
       const view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [0, 10],
+        center: [0, 10], // roughly global
         zoom: 2
       });
 
       view.when().then(function () {
 
+        // Editor for review points
         const editor = new Editor({
           view,
           layerInfos: [{
@@ -158,6 +194,7 @@
           }]
         });
 
+        // Basemap gallery
         const basemapGallery = new BasemapGallery({ view });
         const bgExpand = new Expand({
           view,
@@ -165,8 +202,10 @@
           expanded: false
         });
 
+        // Layer list to toggle all regional layers
         const layerList = new LayerList({ view });
 
+        // UI placement
         view.ui.add(editor, "top-right");
         view.ui.add(bgExpand, "bottom-right");
         view.ui.add(layerList, "top-left");
