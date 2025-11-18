@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>South America Irrigation Review</title>
+  <title>Global Irrigation Review</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
   <!-- ArcGIS JS API -->
@@ -16,9 +16,40 @@
       height: 100%;
       width: 100%;
     }
+
+    /* Continent selector UI */
+    #continentControl {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 50;
+      background: white;
+      padding: 6px 8px;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    #continentControl select {
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
+  <!-- Continent selector -->
+  <div id="continentControl">
+    Continent:
+    <select id="continentSelect">
+      <option value="africa">Africa</option>
+      <option value="asia">Asia</option>
+      <option value="north_america">North America</option>
+      <option value="south_america">South America</option>
+      <option value="europe">Europe</option>
+      <option value="oceania">Oceania</option>
+    </select>
+  </div>
+
   <div id="viewDiv"></div>
 
   <script>
@@ -41,17 +72,95 @@
     ) {
 
       // --------------------------------------------------------------------
-      // 1. South America binary layer (tiled imagery)
+      // 0. Shared blue colormap rule (only for NA, Asia, Africa)
       // --------------------------------------------------------------------
-      const saBinaryLayer = new ImageryTileLayer({
-        portalItem: {
-          id: "364ae8e6439c41f986f13c59fdd90629"  // South America binary tiles
-        },
-        opacity: 0.7   // so you can see the basemap underneath a bit
-      });
+      const blueRenderingRule = {
+        rasterFunction: "Colormap",
+        rasterFunctionArguments: {
+          Raster: "$$",
+          // [pixelValue, R, G, B, A]
+          Colormap: [
+            [0, 0,   0,   0,   0],     // 0 = transparent/no irrigation
+            [1, 198, 219, 239, 255],   // light blue
+            [2, 158, 202, 225, 255],   // medium light blue
+            [3, 107, 174, 214, 255],   // medium blue
+            [4,  49, 130, 189, 255],   // dark blue
+            [5,   8,  81, 156, 255]    // very dark blue
+          ]
+        }
+      };
 
       // --------------------------------------------------------------------
-      // 2. Review points layer (shared review layer)
+      // 1. Continent configuration
+      //    - useColormap = true only for those that are black (NA, Asia, Africa)
+      //    - others keep their default symbology from the service
+      // --------------------------------------------------------------------
+      const continents = {
+        africa: {
+          label: "Africa",
+          portalItemId: "d66a2816a3614ec38c91ba15384202c8",
+          center: [20, 5],
+          zoom: 3,
+          useColormap: true
+        },
+        asia: {
+          label: "Asia",
+          portalItemId: "6e4f5c7c85064ec2b41d9166790adf9b",
+          center: [90, 35],
+          zoom: 3,
+          useColormap: true
+        },
+        north_america: {
+          label: "North America",
+          portalItemId: "a510d600fe5540459649dd00811cb64d",
+          center: [-100, 45],
+          zoom: 3,
+          useColormap: true
+        },
+        south_america: {
+          label: "South America",
+          portalItemId: "364ae8e6439c41f986f13c59fdd90629",
+          center: [-60, -15],
+          zoom: 3,
+          useColormap: false   // already dark blue in service
+        },
+        europe: {
+          label: "Europe",
+          portalItemId: "3224077973684f21a037031a4dd11a1c",
+          center: [15, 54],
+          zoom: 4,
+          useColormap: false   // already dark blue in service
+        },
+        oceania: {
+          label: "Oceania",
+          portalItemId: "779fcb3765f44a4f8c53af10fa4a4a90",
+          center: [140, -25],
+          zoom: 4,
+          useColormap: false   // already dark blue in service
+        }
+      };
+
+      // Start on Africa (you can change initialKey)
+      const initialKey = "africa";
+      const initialCfg = continents[initialKey];
+
+      // --------------------------------------------------------------------
+      // 2. Imagery layer (irrigation tiles) – portalItem + conditional colormap
+      // --------------------------------------------------------------------
+      const irrigationLayer = new ImageryTileLayer({
+        portalItem: {
+          id: initialCfg.portalItemId
+        },
+        opacity: 0.8
+      });
+
+      // Apply colormap only if needed for initial continent
+      if (initialCfg.useColormap) {
+        irrigationLayer.renderingRule = blueRenderingRule;
+      }
+
+      // --------------------------------------------------------------------
+      // 3. Shared review points layer
       // --------------------------------------------------------------------
       const reviewLayer = new FeatureLayer({
         portalItem: {
@@ -61,22 +170,22 @@
       });
 
       // --------------------------------------------------------------------
-      // 3. Map & view (with basemap)
+      // 4. Map & view (imagery basemap)
       // --------------------------------------------------------------------
       const map = new Map({
-        basemap: "satellite",         // <-- change this to any Esri basemap id
-        layers: [saBinaryLayer, reviewLayer]
+        basemap: "satellite",  // imagery background
+        layers: [irrigationLayer, reviewLayer]
       });
 
       const view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [-60, -15],  // rough center of South America
-        zoom: 3
+        center: initialCfg.center,
+        zoom: initialCfg.zoom
       });
 
       // --------------------------------------------------------------------
-      // 4. Editor widget – FP/FN/U + comments
+      // 5. Editor + Basemap UI
       // --------------------------------------------------------------------
       view.when().then(function () {
 
@@ -88,8 +197,8 @@
             updateEnabled: true,
             deleteEnabled: false,
             formTemplate: {
-              title: "South America irrigation review",
-              description: "Click on the map to add a review point and tag it.",
+              title: "Irrigation review",
+              description: "Choose a continent, then click on the map to add a review point and tag it.",
               elements: [
                 {
                   type: "field",
@@ -126,9 +235,6 @@
           }]
         });
 
-        // ------------------------------------------------------------------
-        // 5. Basemap gallery (so users can change basemap)
-        // ------------------------------------------------------------------
         const basemapGallery = new BasemapGallery({
           view: view
         });
@@ -141,6 +247,38 @@
 
         view.ui.add(editor, "top-right");
         view.ui.add(bgExpand, "top-left");
+
+        // ----------------------------------------------------------------
+        // 6. Continent dropdown logic
+        // ----------------------------------------------------------------
+        const continentSelect = document.getElementById("continentSelect");
+        continentSelect.value = initialKey;
+
+        continentSelect.addEventListener("change", function () {
+          const key = continentSelect.value;
+          const cfg = continents[key];
+          if (!cfg) {
+            return;
+          }
+
+          // swap imagery tiles to this continent
+          irrigationLayer.portalItem = { id: cfg.portalItemId };
+
+          // apply or remove colormap depending on continent
+          if (cfg.useColormap) {
+            irrigationLayer.renderingRule = blueRenderingRule;
+          } else {
+            irrigationLayer.renderingRule = null;  // keep service's own symbology
+          }
+
+          irrigationLayer.refresh();
+
+          // zoom to that continent so it’s clearly visible
+          view.goTo({
+            center: cfg.center,
+            zoom: cfg.zoom
+          });
+        });
       });
 
     });
