@@ -45,18 +45,28 @@
 
       // ----------------------------------------------------------
       // Blue colormap, applied ONLY to Africa, Asia, North America
+      // 0 = transparent, common non-zero values = dark blue
       // ----------------------------------------------------------
       const blueRenderingRule = {
         rasterFunction: "Colormap",
         rasterFunctionArguments: {
           Raster: "$$",
           Colormap: [
-            [0, 0,   0,   0,   0],   // transparent
-            [1, 198, 219, 239, 255],
-            [2, 158, 202, 225, 255],
-            [3, 107, 174, 214, 255],
-            [4,  49, 130, 189, 255],
-            [5,   8,  81, 156, 255]
+            // value ,  R,   G,   B,   A
+            [0,        0,   0,   0,   0],      // background transparent
+
+            // map any likely "irrigated" values to dark blue
+            [1,        8,  81, 156, 255],
+            [2,        8,  81, 156, 255],
+            [3,        8,  81, 156, 255],
+            [4,        8,  81, 156, 255],
+            [5,        8,  81, 156, 255],
+            [10,       8,  81, 156, 255],
+            [50,       8,  81, 156, 255],
+            [100,      8,  81, 156, 255],
+            [150,      8,  81, 156, 255],
+            [200,      8,  81, 156, 255],
+            [255,      8,  81, 156, 255]
           ]
         }
       };
@@ -85,7 +95,7 @@
         title: "North America"
       });
 
-      // These three already have dark-blue styling in the service
+      // These already have dark-blue styling in the service
       const southAmericaLayer = new ImageryTileLayer({
         portalItem: { id: "364ae8e6439c41f986f13c59fdd90629" },
         opacity: 0.8,
@@ -114,7 +124,7 @@
       });
 
       // ----------------------------------------------------------
-      // Map & view – start zoomed out so all continents are visible
+      // Map & view – start zoomed out so all continents visible
       // ----------------------------------------------------------
       const map = new Map({
         basemap: "satellite",
