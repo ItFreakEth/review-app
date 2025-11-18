@@ -37,7 +37,7 @@
   </style>
 </head>
 <body>
-  <!-- Continent selector -->
+  <!-- IMPORTANT: this block must exist so users can choose the continent -->
   <div id="continentControl">
     Continent:
     <select id="continentSelect">
@@ -71,30 +71,23 @@
       Expand
     ) {
 
-      // --------------------------------------------------------------------
-      // 0. Shared blue colormap rule (only for NA, Asia, Africa)
-      // --------------------------------------------------------------------
+      // Blue colormap (only for NA, Asia, Africa)
       const blueRenderingRule = {
         rasterFunction: "Colormap",
         rasterFunctionArguments: {
           Raster: "$$",
-          // [pixelValue, R, G, B, A]
           Colormap: [
-            [0, 0,   0,   0,   0],     // 0 = transparent/no irrigation
-            [1, 198, 219, 239, 255],   // light blue
-            [2, 158, 202, 225, 255],   // medium light blue
-            [3, 107, 174, 214, 255],   // medium blue
-            [4,  49, 130, 189, 255],   // dark blue
-            [5,   8,  81, 156, 255]    // very dark blue
+            [0, 0,   0,   0,   0],
+            [1, 198, 219, 239, 255],
+            [2, 158, 202, 225, 255],
+            [3, 107, 174, 214, 255],
+            [4,  49, 130, 189, 255],
+            [5,   8,  81, 156, 255]
           ]
         }
       };
 
-      // --------------------------------------------------------------------
-      // 1. Continent configuration
-      //    - useColormap = true only for those that are black (NA, Asia, Africa)
-      //    - others keep their default symbology from the service
-      // --------------------------------------------------------------------
+      // Continent configuration
       const continents = {
         africa: {
           label: "Africa",
@@ -122,58 +115,46 @@
           portalItemId: "364ae8e6439c41f986f13c59fdd90629",
           center: [-60, -15],
           zoom: 3,
-          useColormap: false   // already dark blue in service
+          useColormap: false
         },
         europe: {
           label: "Europe",
           portalItemId: "3224077973684f21a037031a4dd11a1c",
           center: [15, 54],
           zoom: 4,
-          useColormap: false   // already dark blue in service
+          useColormap: false
         },
         oceania: {
           label: "Oceania",
           portalItemId: "779fcb3765f44a4f8c53af10fa4a4a90",
           center: [140, -25],
           zoom: 4,
-          useColormap: false   // already dark blue in service
+          useColormap: false
         }
       };
 
-      // Start on Africa (you can change initialKey)
+      // Start on Africa (change if you prefer)
       const initialKey = "africa";
       const initialCfg = continents[initialKey];
 
-      // --------------------------------------------------------------------
-      // 2. Imagery layer (irrigation tiles) – portalItem + conditional colormap
-      // --------------------------------------------------------------------
+      // Imagery layer
       const irrigationLayer = new ImageryTileLayer({
-        portalItem: {
-          id: initialCfg.portalItemId
-        },
+        portalItem: { id: initialCfg.portalItemId },
         opacity: 0.8
       });
-
-      // Apply colormap only if needed for initial continent
       if (initialCfg.useColormap) {
         irrigationLayer.renderingRule = blueRenderingRule;
       }
 
-      // --------------------------------------------------------------------
-      // 3. Shared review points layer
-      // --------------------------------------------------------------------
+      // Shared review layer
       const reviewLayer = new FeatureLayer({
-        portalItem: {
-          id: "eedc0b4ec7364260a474f653127dc08f"   // AreaReview_Tags
-        },
+        portalItem: { id: "eedc0b4ec7364260a474f653127dc08f" },
         outFields: ["*"]
       });
 
-      // --------------------------------------------------------------------
-      // 4. Map & view (imagery basemap)
-      // --------------------------------------------------------------------
+      // Map + view
       const map = new Map({
-        basemap: "satellite",  // imagery background
+        basemap: "satellite",
         layers: [irrigationLayer, reviewLayer]
       });
 
@@ -184,61 +165,18 @@
         zoom: initialCfg.zoom
       });
 
-      // --------------------------------------------------------------------
-      // 5. Editor + Basemap UI
-      // --------------------------------------------------------------------
       view.when().then(function () {
-
         const editor = new Editor({
           view: view,
           layerInfos: [{
             layer: reviewLayer,
             addEnabled: true,
             updateEnabled: true,
-            deleteEnabled: false,
-            formTemplate: {
-              title: "Irrigation review",
-              description: "Choose a continent, then click on the map to add a review point and tag it.",
-              elements: [
-                {
-                  type: "field",
-                  fieldName: "tag_code",
-                  label: "Tag",
-                  domain: {
-                    type: "codedValue",
-                    codedValues: [
-                      { name: "False Positive (FP)", code: "FP" },
-                      { name: "False Negative (FN)", code: "FN" },
-                      { name: "Uncertain (U)",       code: "U" }
-                    ]
-                  }
-                },
-                {
-                  type: "field",
-                  fieldName: "Reviewer_Comments",
-                  label: "Comments",
-                  hint: "Optional: explain why you chose FP / FN / U."
-                },
-                {
-                  type: "field",
-                  fieldName: "reviewer",
-                  label: "Reviewer",
-                  hint: "Your name or initials."
-                },
-                {
-                  type: "field",
-                  fieldName: "review_date",
-                  label: "Review date"
-                }
-              ]
-            }
+            deleteEnabled: false
           }]
         });
 
-        const basemapGallery = new BasemapGallery({
-          view: view
-        });
-
+        const basemapGallery = new BasemapGallery({ view: view });
         const bgExpand = new Expand({
           view: view,
           content: basemapGallery,
@@ -248,32 +186,25 @@
         view.ui.add(editor, "top-right");
         view.ui.add(bgExpand, "top-left");
 
-        // ----------------------------------------------------------------
-        // 6. Continent dropdown logic
-        // ----------------------------------------------------------------
+        // Hook up the continent dropdown
         const continentSelect = document.getElementById("continentSelect");
         continentSelect.value = initialKey;
 
-        continentSelect.addEventListener("change", function () {
+        continentSelect.addEventListener("change", () => {
           const key = continentSelect.value;
           const cfg = continents[key];
-          if (!cfg) {
-            return;
-          }
+          if (!cfg) return;
 
-          // swap imagery tiles to this continent
           irrigationLayer.portalItem = { id: cfg.portalItemId };
 
-          // apply or remove colormap depending on continent
           if (cfg.useColormap) {
             irrigationLayer.renderingRule = blueRenderingRule;
           } else {
-            irrigationLayer.renderingRule = null;  // keep service's own symbology
+            irrigationLayer.renderingRule = null;
           }
 
           irrigationLayer.refresh();
 
-          // zoom to that continent so it’s clearly visible
           view.goTo({
             center: cfg.center,
             zoom: cfg.zoom
