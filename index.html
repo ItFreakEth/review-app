@@ -46,35 +46,33 @@
     ) {
 
       // ----------------------------------------------------------
-      // Blue colormap RasterFunction (for Africa, Asia, North America)
-      // 0 = transparent, everything else = dark blue
+      // Build a colormap where:
+      //   0   -> fully transparent
+      //   1–255 -> dark blue
       // ----------------------------------------------------------
+      const colormap = [];
+      for (let v = 0; v < 256; v++) {
+        if (v === 0) {
+          // background
+          colormap.push([0, 0, 0, 0, 0]);      // [value, R, G, B, A]
+        } else {
+          // irrigated / positive values
+          colormap.push([v, 8, 81, 156, 255]); // dark blue
+        }
+      }
+
       const blueRenderingRule = new RasterFunction({
         functionName: "Colormap",
         functionArguments: {
           Raster: "$$",
-          Colormap: [
-            // value ,  R,   G,   B,   A
-            [0,        0,   0,   0,   0],      // background transparent
-
-            // irrigated / positive values -> dark blue
-            [1,        8,  81, 156, 255],
-            [2,        8,  81, 156, 255],
-            [3,        8,  81, 156, 255],
-            [4,        8,  81, 156, 255],
-            [5,        8,  81, 156, 255],
-            [10,       8,  81, 156, 255],
-            [50,       8,  81, 156, 255],
-            [100,      8,  81, 156, 255],
-            [150,      8,  81, 156, 255],
-            [200,      8,  81, 156, 255],
-            [255,      8,  81, 156, 255]
-          ]
+          Colormap: colormap
         }
       });
 
       // ----------------------------------------------------------
       // Imagery layers per continent
+      //  - Africa, Asia, North America -> forced dark blue
+      //  - Others keep built-in styling
       // ----------------------------------------------------------
       const africaLayer = new ImageryTileLayer({
         portalItem: { id: "d66a2816a3614ec38c91ba15384202c8" },
@@ -97,7 +95,7 @@
         title: "North America"
       });
 
-      // These already have dark-blue styling in the service – no override
+      // These already have the dark-blue look you like
       const southAmericaLayer = new ImageryTileLayer({
         portalItem: { id: "364ae8e6439c41f986f13c59fdd90629" },
         opacity: 0.8,
@@ -126,7 +124,7 @@
       });
 
       // ----------------------------------------------------------
-      // Map & view – start zoomed out so all continents visible
+      // Map & view – start zoomed out
       // ----------------------------------------------------------
       const map = new Map({
         basemap: "satellite",
@@ -144,13 +142,12 @@
       const view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [0, 10], // roughly global
+        center: [0, 10],
         zoom: 2
       });
 
       view.when().then(function () {
 
-        // Editor
         const editor = new Editor({
           view,
           layerInfos: [{
@@ -161,7 +158,6 @@
           }]
         });
 
-        // Basemap gallery
         const basemapGallery = new BasemapGallery({ view });
         const bgExpand = new Expand({
           view,
@@ -169,10 +165,8 @@
           expanded: false
         });
 
-        // Layer list to toggle continents on/off
         const layerList = new LayerList({ view });
 
-        // UI placement
         view.ui.add(editor, "top-right");
         view.ui.add(bgExpand, "bottom-right");
         view.ui.add(layerList, "top-left");
