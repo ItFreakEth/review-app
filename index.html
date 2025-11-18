@@ -2,74 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Global Irrigation Review</title>
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=0" />
+  <title>Global Irrigation Review – All Continents</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
   <!-- ArcGIS JS API -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
 
   <style>
-    html, body {
+    html, body, #viewDiv {
       padding: 0;
       margin: 0;
       height: 100%;
       width: 100%;
       font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
     }
-
-    #viewDiv {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-    }
-
-    /* Top bar so you can SEE this is the new file */
-    #topBar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: rgba(255,255,255,0.9);
-      z-index: 60;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-      font-size: 14px;
-    }
-
-    #appTitle {
-      font-weight: 600;
-      margin-right: 16px;
-    }
-
-    #continentSelect {
-      margin-left: 4px;
-    }
   </style>
 </head>
 <body>
-  <!-- TOP BAR WITH DROPDOWN -->
-  <div id="topBar">
-    <div id="appTitle">Global Irrigation Review</div>
-    <div>
-      Continent:
-      <select id="continentSelect">
-        <option value="africa">Africa</option>
-        <option value="asia">Asia</option>
-        <option value="north_america">North America</option>
-        <option value="south_america">South America</option>
-        <option value="europe">Europe</option>
-        <option value="oceania">Oceania</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- MAP -->
   <div id="viewDiv"></div>
 
   <script>
@@ -80,7 +30,8 @@
       "esri/layers/FeatureLayer",
       "esri/widgets/Editor",
       "esri/widgets/BasemapGallery",
-      "esri/widgets/Expand"
+      "esri/widgets/Expand",
+      "esri/widgets/LayerList"
     ], function (
       Map,
       MapView,
@@ -88,16 +39,19 @@
       FeatureLayer,
       Editor,
       BasemapGallery,
-      Expand
+      Expand,
+      LayerList
     ) {
 
-      // Blue colormap (for NA, Asia, Africa only)
+      // ----------------------------------------------------------
+      // Blue colormap, applied ONLY to Africa, Asia, North America
+      // ----------------------------------------------------------
       const blueRenderingRule = {
         rasterFunction: "Colormap",
         rasterFunctionArguments: {
           Raster: "$$",
           Colormap: [
-            [0, 0,   0,   0,   0],
+            [0, 0,   0,   0,   0],   // transparent
             [1, 198, 219, 239, 255],
             [2, 158, 202, 225, 255],
             [3, 107, 174, 214, 255],
@@ -107,87 +61,86 @@
         }
       };
 
-      // All continents
-      const continents = {
-        africa: {
-          label: "Africa",
-          portalItemId: "d66a2816a3614ec38c91ba15384202c8",
-          center: [20, 5],
-          zoom: 3,
-          useColormap: true
-        },
-        asia: {
-          label: "Asia",
-          portalItemId: "6e4f5c7c85064ec2b41d9166790adf9b",
-          center: [90, 35],
-          zoom: 3,
-          useColormap: true
-        },
-        north_america: {
-          label: "North America",
-          portalItemId: "a510d600fe5540459649dd00811cb64d",
-          center: [-100, 45],
-          zoom: 3,
-          useColormap: true
-        },
-        south_america: {
-          label: "South America",
-          portalItemId: "364ae8e6439c41f986f13c59fdd90629",
-          center: [-60, -15],
-          zoom: 3,
-          useColormap: false
-        },
-        europe: {
-          label: "Europe",
-          portalItemId: "3224077973684f21a037031a4dd11a1c",
-          center: [15, 54],
-          zoom: 4,
-          useColormap: false
-        },
-        oceania: {
-          label: "Oceania",
-          portalItemId: "779fcb3765f44a4f8c53af10fa4a4a90",
-          center: [140, -25],
-          zoom: 4,
-          useColormap: false
-        }
-      };
-
-      // Start on Africa
-      const initialKey = "africa";
-      const initialCfg = continents[initialKey];
-
-      // Imagery layer
-      const irrigationLayer = new ImageryTileLayer({
-        portalItem: { id: initialCfg.portalItemId },
-        opacity: 0.8
+      // ----------------------------------------------------------
+      // Imagery layers per continent
+      // ----------------------------------------------------------
+      const africaLayer = new ImageryTileLayer({
+        portalItem: { id: "d66a2816a3614ec38c91ba15384202c8" },
+        opacity: 0.8,
+        renderingRule: blueRenderingRule,
+        title: "Africa"
       });
-      if (initialCfg.useColormap) {
-        irrigationLayer.renderingRule = blueRenderingRule;
-      }
 
-      // Review points
+      const asiaLayer = new ImageryTileLayer({
+        portalItem: { id: "6e4f5c7c85064ec2b41d9166790adf9b" },
+        opacity: 0.8,
+        renderingRule: blueRenderingRule,
+        title: "Asia"
+      });
+
+      const northAmericaLayer = new ImageryTileLayer({
+        portalItem: { id: "a510d600fe5540459649dd00811cb64d" },
+        opacity: 0.8,
+        renderingRule: blueRenderingRule,
+        title: "North America"
+      });
+
+      // These three already have dark-blue styling in the service
+      const southAmericaLayer = new ImageryTileLayer({
+        portalItem: { id: "364ae8e6439c41f986f13c59fdd90629" },
+        opacity: 0.8,
+        title: "South America"
+      });
+
+      const europeLayer = new ImageryTileLayer({
+        portalItem: { id: "3224077973684f21a037031a4dd11a1c" },
+        opacity: 0.8,
+        title: "Europe"
+      });
+
+      const oceaniaLayer = new ImageryTileLayer({
+        portalItem: { id: "779fcb3765f44a4f8c53af10fa4a4a90" },
+        opacity: 0.8,
+        title: "Oceania"
+      });
+
+      // ----------------------------------------------------------
+      // Shared review points layer
+      // ----------------------------------------------------------
       const reviewLayer = new FeatureLayer({
-        portalItem: { id: "eedc0b4ec7364260a474f653127dc08f" },
-        outFields: ["*"]
+        portalItem: { id: "eedc0b4ec7364260a474f653127dc08f" }, // AreaReview_Tags
+        outFields: ["*"],
+        title: "Review points"
       });
 
-      // Map + view
+      // ----------------------------------------------------------
+      // Map & view – start zoomed out so all continents are visible
+      // ----------------------------------------------------------
       const map = new Map({
         basemap: "satellite",
-        layers: [irrigationLayer, reviewLayer]
+        layers: [
+          africaLayer,
+          asiaLayer,
+          northAmericaLayer,
+          southAmericaLayer,
+          europeLayer,
+          oceaniaLayer,
+          reviewLayer
+        ]
       });
 
       const view = new MapView({
         container: "viewDiv",
         map: map,
-        center: initialCfg.center,
-        zoom: initialCfg.zoom
+        center: [0, 10], // roughly global
+        zoom: 2
       });
 
       view.when().then(function () {
+
+        // Editor
         const editor = new Editor({
-          view: view,
+          view,
           layerInfos: [{
             layer: reviewLayer,
             addEnabled: true,
@@ -196,6 +149,7 @@
           }]
         });
 
+        // Basemap gallery
         const basemapGallery = new BasemapGallery({ view });
         const bgExpand = new Expand({
           view,
@@ -203,34 +157,17 @@
           expanded: false
         });
 
+        // Layer list to toggle continents on/off
+        const layerList = new LayerList({
+          view
+        });
+
+        // UI placement
         view.ui.add(editor, "top-right");
         view.ui.add(bgExpand, "bottom-right");
-
-        // Dropdown logic
-        const continentSelect = document.getElementById("continentSelect");
-        continentSelect.value = initialKey;
-
-        continentSelect.addEventListener("change", () => {
-          const key = continentSelect.value;
-          const cfg = continents[key];
-          if (!cfg) return;
-
-          irrigationLayer.portalItem = { id: cfg.portalItemId };
-
-          if (cfg.useColormap) {
-            irrigationLayer.renderingRule = blueRenderingRule;
-          } else {
-            irrigationLayer.renderingRule = null;
-          }
-
-          irrigationLayer.refresh();
-
-          view.goTo({
-            center: cfg.center,
-            zoom: cfg.zoom
-          });
-        });
+        view.ui.add(layerList, "top-left");
       });
+
     });
   </script>
 </body>
