@@ -31,7 +31,8 @@
       "esri/widgets/Editor",
       "esri/widgets/BasemapGallery",
       "esri/widgets/Expand",
-      "esri/widgets/LayerList"
+      "esri/widgets/LayerList",
+      "esri/layers/support/RasterFunction"
     ], function (
       Map,
       MapView,
@@ -40,22 +41,23 @@
       Editor,
       BasemapGallery,
       Expand,
-      LayerList
+      LayerList,
+      RasterFunction
     ) {
 
       // ----------------------------------------------------------
-      // Blue colormap, applied ONLY to Africa, Asia, North America
-      // 0 = transparent, common non-zero values = dark blue
+      // Blue colormap RasterFunction (for Africa, Asia, North America)
+      // 0 = transparent, everything else = dark blue
       // ----------------------------------------------------------
-      const blueRenderingRule = {
-        rasterFunction: "Colormap",
-        rasterFunctionArguments: {
+      const blueRenderingRule = new RasterFunction({
+        functionName: "Colormap",
+        functionArguments: {
           Raster: "$$",
           Colormap: [
             // value ,  R,   G,   B,   A
             [0,        0,   0,   0,   0],      // background transparent
 
-            // map any likely "irrigated" values to dark blue
+            // irrigated / positive values -> dark blue
             [1,        8,  81, 156, 255],
             [2,        8,  81, 156, 255],
             [3,        8,  81, 156, 255],
@@ -69,7 +71,7 @@
             [255,      8,  81, 156, 255]
           ]
         }
-      };
+      });
 
       // ----------------------------------------------------------
       // Imagery layers per continent
@@ -95,7 +97,7 @@
         title: "North America"
       });
 
-      // These already have dark-blue styling in the service
+      // These already have dark-blue styling in the service – no override
       const southAmericaLayer = new ImageryTileLayer({
         portalItem: { id: "364ae8e6439c41f986f13c59fdd90629" },
         opacity: 0.8,
@@ -168,9 +170,7 @@
         });
 
         // Layer list to toggle continents on/off
-        const layerList = new LayerList({
-          view
-        });
+        const layerList = new LayerList({ view });
 
         // UI placement
         view.ui.add(editor, "top-right");
