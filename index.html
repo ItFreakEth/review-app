@@ -3,53 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <title>Global Irrigation Review</title>
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=0" />
 
   <!-- ArcGIS JS API -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
 
   <style>
-    html, body, #viewDiv {
+    html, body {
       padding: 0;
       margin: 0;
       height: 100%;
       width: 100%;
-    }
-
-    /* Continent selector UI */
-    #continentControl {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 50;
-      background: white;
-      padding: 6px 8px;
-      border-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
       font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
-      font-size: 13px;
     }
 
-    #continentControl select {
+    #viewDiv {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    /* Top bar so you can SEE this is the new file */
+    #topBar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: rgba(255,255,255,0.9);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      font-size: 14px;
+    }
+
+    #appTitle {
+      font-weight: 600;
+      margin-right: 16px;
+    }
+
+    #continentSelect {
       margin-left: 4px;
     }
   </style>
 </head>
 <body>
-  <!-- IMPORTANT: this block must exist so users can choose the continent -->
-  <div id="continentControl">
-    Continent:
-    <select id="continentSelect">
-      <option value="africa">Africa</option>
-      <option value="asia">Asia</option>
-      <option value="north_america">North America</option>
-      <option value="south_america">South America</option>
-      <option value="europe">Europe</option>
-      <option value="oceania">Oceania</option>
-    </select>
+  <!-- TOP BAR WITH DROPDOWN -->
+  <div id="topBar">
+    <div id="appTitle">Global Irrigation Review</div>
+    <div>
+      Continent:
+      <select id="continentSelect">
+        <option value="africa">Africa</option>
+        <option value="asia">Asia</option>
+        <option value="north_america">North America</option>
+        <option value="south_america">South America</option>
+        <option value="europe">Europe</option>
+        <option value="oceania">Oceania</option>
+      </select>
+    </div>
   </div>
 
+  <!-- MAP -->
   <div id="viewDiv"></div>
 
   <script>
@@ -71,7 +91,7 @@
       Expand
     ) {
 
-      // Blue colormap (only for NA, Asia, Africa)
+      // Blue colormap (for NA, Asia, Africa only)
       const blueRenderingRule = {
         rasterFunction: "Colormap",
         rasterFunctionArguments: {
@@ -87,7 +107,7 @@
         }
       };
 
-      // Continent configuration
+      // All continents
       const continents = {
         africa: {
           label: "Africa",
@@ -133,7 +153,7 @@
         }
       };
 
-      // Start on Africa (change if you prefer)
+      // Start on Africa
       const initialKey = "africa";
       const initialCfg = continents[initialKey];
 
@@ -146,7 +166,7 @@
         irrigationLayer.renderingRule = blueRenderingRule;
       }
 
-      // Shared review layer
+      // Review points
       const reviewLayer = new FeatureLayer({
         portalItem: { id: "eedc0b4ec7364260a474f653127dc08f" },
         outFields: ["*"]
@@ -176,17 +196,17 @@
           }]
         });
 
-        const basemapGallery = new BasemapGallery({ view: view });
+        const basemapGallery = new BasemapGallery({ view });
         const bgExpand = new Expand({
-          view: view,
+          view,
           content: basemapGallery,
           expanded: false
         });
 
         view.ui.add(editor, "top-right");
-        view.ui.add(bgExpand, "top-left");
+        view.ui.add(bgExpand, "bottom-right");
 
-        // Hook up the continent dropdown
+        // Dropdown logic
         const continentSelect = document.getElementById("continentSelect");
         continentSelect.value = initialKey;
 
@@ -211,7 +231,6 @@
           });
         });
       });
-
     });
   </script>
 </body>
